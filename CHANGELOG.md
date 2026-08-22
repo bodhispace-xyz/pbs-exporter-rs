@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5](https://github.com/bodhispace-xyz/pbs-exporter-rs/compare/pbs-exporter-rs-v0.4.4...pbs-exporter-rs-v0.4.5) (2026-08-22)
+
+
+### Features
+
+* optimise memory and add snapshot verification metrics ([b59a979](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/b59a979bb80a211f11316a5104044aa894a335db))
+* optimize memory and add snapshot verification metrics ([d5bf63b](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/d5bf63b35ef8caec44ad79183cff06a2abf74997))
+
+
+### Bug Fixes
+
+* **metrics:** track maximum endtime for task_last_run_timestamp ([#27](https://github.com/bodhispace-xyz/pbs-exporter-rs/issues/27)) ([0a35264](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/0a35264b486be82ae7a97acabd9bfc4344a6b803))
+
 ## [Unreleased]
 
 ### Added
