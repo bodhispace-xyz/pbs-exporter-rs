@@ -1,6 +1,6 @@
 # Multi-stage Docker build for PBS Exporter
 # Stage 1: Build the binary
-FROM rust:1.83-alpine AS builder
+FROM rust:alpine AS builder
 
 WORKDIR /app
 
