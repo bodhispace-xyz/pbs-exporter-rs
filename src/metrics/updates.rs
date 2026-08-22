@@ -286,6 +286,9 @@ pub(super) fn update_task_metrics(
     // Count running tasks by type and comment
     let mut running_counts: HashMap<(&str, &str), u64> = HashMap::with_capacity(tasks.len() / 2);
 
+    // Track latest finished task timestamp per worker type
+    let mut last_run_map: HashMap<&str, i64> = HashMap::new();
+
     for task in tasks {
         // Use as_deref to avoid cloning
         let comment = task.comment.as_deref().unwrap_or_else(|| {
@@ -321,12 +324,22 @@ pub(super) fn update_task_metrics(
                 .with_label_values(&[task.worker_type.as_str(), status, worker_id, comment])
                 .set(duration as f64);
 
-            // Update last run timestamp
-            metrics
-                .task_last_run_timestamp
-                .with_label_values(&[&task.worker_type])
-                .set(endtime as f64);
+            // Record the latest finished task timestamp for this worker type
+            let entry = last_run_map
+                .entry(task.worker_type.as_str())
+                .or_insert(endtime);
+            if endtime > *entry {
+                *entry = endtime;
+            }
         }
+    }
+
+    // Set last run timestamp for each worker type to the most recent endtime
+    for (worker_type, latest_endtime) in last_run_map {
+        metrics
+            .task_last_run_timestamp
+            .with_label_values(&[worker_type])
+            .set(latest_endtime as f64);
     }
 
     // Update total task counts
