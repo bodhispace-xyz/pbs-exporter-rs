@@ -325,7 +325,9 @@ pub(super) fn update_task_metrics(
                 .set(duration as f64);
 
             // Record the latest finished task timestamp for this worker type
-            let entry = last_run_map.entry(task.worker_type.as_str()).or_insert(endtime);
+            let entry = last_run_map
+                .entry(task.worker_type.as_str())
+                .or_insert(endtime);
             if endtime > *entry {
                 *entry = endtime;
             }
