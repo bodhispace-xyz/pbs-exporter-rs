@@ -13,7 +13,7 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  # Quick checks - always run on all PRs
+  # All verification and compilation jobs run in parallel for maximum speed
   check:
     name: Check
     runs-on: ubuntu-latest
@@ -47,7 +47,6 @@ jobs:
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-  # Heavy jobs - only run on PRs to develop (feature → develop)
   test:
     name: Test Suite
     runs-on: ubuntu-latest
@@ -65,10 +64,8 @@ jobs:
     if: github.base_ref == 'develop'
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       - name: Install cargo-audit
-        run: cargo install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
       - name: Run audit
         run: cargo audit
 
@@ -76,7 +73,6 @@ jobs:
     name: Build Release
     runs-on: ubuntu-latest
     if: github.base_ref == 'develop'
-    needs: [check, test, fmt, clippy, audit]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -96,7 +92,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: false
