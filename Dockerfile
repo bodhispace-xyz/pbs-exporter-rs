@@ -22,7 +22,7 @@ RUN cargo build --release && \
     strip /app/target/release/pbs-exporter
 
 # Stage 2: Runtime image (Alpine for minimal size)
-FROM alpine:3.19
+FROM alpine:3.21
 
 # Install only runtime dependencies
 RUN apk add --no-cache \
