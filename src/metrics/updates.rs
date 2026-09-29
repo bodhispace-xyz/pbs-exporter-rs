@@ -77,6 +77,7 @@ pub(super) fn update_datastore_metrics(metrics: &MetricRegistry, datastores: &[D
 pub(super) fn update_snapshot_metrics(
     metrics: &MetricRegistry,
     datastore: &str,
+    namespace: &str,
     snapshots: &[Snapshot],
     comment_map: &LatestSnapshotCommentMap,
     snapshot_history_limit: usize,
@@ -124,6 +125,7 @@ pub(super) fn update_snapshot_metrics(
         // Base labels for most metrics
         let base_labels = [
             datastore,
+            namespace,
             &snapshot.backup_type,
             &snapshot.backup_id,
             safe_comment,
@@ -141,6 +143,7 @@ pub(super) fn update_snapshot_metrics(
         // Size metric needs extra "verified" label
         let size_labels = [
             datastore,
+            namespace,
             &snapshot.backup_type,
             &snapshot.backup_id,
             safe_comment,
@@ -236,6 +239,7 @@ fn snapshot_verification(verification: Option<&VerificationStatus>) -> SnapshotV
 pub(super) fn update_backup_metrics(
     metrics: &MetricRegistry,
     datastore: &str,
+    namespace: &str,
     groups: &[BackupGroup],
     comment_map: &LatestSnapshotCommentMap,
 ) {
@@ -256,6 +260,7 @@ pub(super) fn update_backup_metrics(
 
         let labels = &[
             datastore,
+            namespace,
             &group.backup_type,
             &group.backup_id,
             truncated_comment,

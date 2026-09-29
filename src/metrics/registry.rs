@@ -211,12 +211,12 @@ impl MetricRegistry {
             snapshot_count: builder.gauge_vec(
                 "pbs_snapshot_count",
                 "Number of backup snapshots",
-                &["datastore", "backup_type", "backup_id", "comment"],
+                &["datastore", "namespace", "backup_type", "backup_id", "comment"],
             )?,
             snapshot_last_timestamp_seconds: builder.gauge_vec(
                 "pbs_snapshot_last_timestamp_seconds",
                 "Unix timestamp of last backup",
-                &["datastore", "backup_type", "backup_id", "comment"],
+                &["datastore", "namespace", "backup_type", "backup_id", "comment"],
             )?,
 
             // Individual snapshot metrics
@@ -225,6 +225,7 @@ impl MetricRegistry {
                 "Individual snapshot information with timestamp as value",
                 &[
                     "datastore",
+                    "namespace",
                     "backup_type",
                     "backup_id",
                     "comment",
@@ -236,6 +237,7 @@ impl MetricRegistry {
                 "Size of individual snapshot in bytes",
                 &[
                     "datastore",
+                    "namespace",
                     "backup_type",
                     "backup_id",
                     "comment",
@@ -248,6 +250,7 @@ impl MetricRegistry {
                 "Timestamp of last verification in seconds",
                 &[
                     "datastore",
+                    "namespace",
                     "backup_type",
                     "backup_id",
                     "comment",
@@ -259,6 +262,7 @@ impl MetricRegistry {
                 "Snapshot verification status (1=ok, 0=failed/unknown)",
                 &[
                     "datastore",
+                    "namespace",
                     "backup_type",
                     "backup_id",
                     "comment",
@@ -270,6 +274,7 @@ impl MetricRegistry {
                 "Snapshot protection status (1=protected, 0=not protected)",
                 &[
                     "datastore",
+                    "namespace",
                     "backup_type",
                     "backup_id",
                     "comment",

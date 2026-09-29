@@ -245,6 +245,13 @@ async fn test_metrics_collection_success() {
         .create_async()
         .await;
 
+    let _mock_namespaces = server
+        .mock("GET", "/api2/json/admin/datastore/backup/namespace")
+        .with_status(200)
+        .with_body(r#"{"data": [{"ns": ""}]}"#)
+        .create_async()
+        .await;
+
     // Mock backup groups
     let _mock_groups = server
         .mock("GET", "/api2/json/admin/datastore/backup/groups")

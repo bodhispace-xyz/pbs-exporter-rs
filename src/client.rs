@@ -336,17 +336,75 @@ impl PbsClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn get_snapshots(&self, datastore: &str) -> Result<Vec<Snapshot>> {
+    pub async fn get_snapshots(&self, datastore: &str, namespace: &str) -> Result<Vec<Snapshot>> {
         let snapshots: Vec<Snapshot> = self
             .get_api_data(
-                &format!("/api2/json/admin/datastore/{}/snapshots", datastore),
+                &format!("/api2/json/admin/datastore/{}/snapshots?ns={}", datastore, namespace),
                 &format!("snapshots for {}", datastore),
                 Some(format!("Failed to parse snapshots for {}", datastore)),
             )
             .await?;
 
-        debug!("Fetched {} snapshots for {}", snapshots.len(), datastore);
+        debug!("Fetched {} snapshots for {} in namespace {}", snapshots.len(), datastore, namespace);
         Ok(snapshots)
+    }
+}
+
+
+impl PbsClient {
+    /// Get namespaces for a specific datastore.
+    ///
+    /// Fetches all backup namespaces from the specified datastore.
+    /// This is needed for extracting snapshot metadata and comments.
+    ///
+    /// # Arguments
+    ///
+    /// * `datastore` - Name of the datastore to query
+    ///
+    /// # Returns
+    ///
+    /// Returns a vector of `Namespace` structs containing namespace names.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The datastore doesn't exist or is not accessible
+    /// - The API request fails
+    /// - The response JSON cannot be parsed
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use pbs_exporter::client::PbsClient;
+    /// # use pbs_exporter::config::PbsConfig;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let config = PbsConfig {
+    /// #     endpoint: "https://pbs.example.com:8007".to_string(),
+    /// #     token_id: "user@pam!token".to_string(),
+    /// #     token_secret: "secret".to_string(),
+    /// #     verify_tls: false,
+    /// #     timeout_seconds: 5,
+    /// #     snapshot_history_limit: 0,
+    /// # };
+    /// # let client = PbsClient::new(config)?;
+    /// let namespaces = client.get_namespaces("backup").await?;
+    /// for namespace in namespaces {
+    ///     println!("{}", namespace.name);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_namespaces(&self, datastore: &str) -> Result<Vec<Namespace>> {
+        let namespaces: Vec<Namespace> = self
+            .get_api_data(
+                &format!("/api2/json/admin/datastore/{}/namespace", datastore),
+                &format!("namespaces for {}", datastore),
+                Some(format!("Failed to parse namespaces for {}", datastore)),
+            )
+            .await?;
+
+        debug!("Fetched {} namespaces for {}", namespaces.len(), datastore);
+        Ok(namespaces)
     }
 }
 
