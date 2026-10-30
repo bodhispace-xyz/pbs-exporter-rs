@@ -88,37 +88,50 @@ pub(super) async fn collect_internal(collector: &MetricsCollector) -> Result<()>
 
     // Collect backup groups and snapshots for each datastore
     for ds in &datastores {
-        // Fetch snapshots to get comments
-        let snapshots = match client.get_snapshots(&ds.store).await {
-            Ok(snaps) => snaps,
+        // Fetch namespaces for datastore
+        let namespaces = match client.get_namespaces(&ds.store).await{
+            Ok(ns) => ns,
             Err(e) => {
-                error!("Failed to get snapshots for {}: {}", ds.store, e);
+                error!("Failed to get namespaces for {}: {}", ds.store, e);
                 Vec::new()
             }
         };
 
-        let comment_map = build_latest_snapshot_comment_map(&snapshots);
-        add_task_comments_from_snapshots(&ds.store, &comment_map, &mut task_comment_map);
+        for ns in &namespaces {
+            // Fetch snapshots to get comments
+            let snapshots = match client.get_snapshots(&ds.store, &ns.name).await {
+                Ok(snaps) => snaps,
+                Err(e) => {
+                    error!("Failed to get snapshots for {}: {}", ds.store, e);
+                    Vec::new()
+                }
+            };
 
-        // Update individual snapshot metrics
-        super::updates::update_snapshot_metrics(
-            metrics,
-            &ds.store,
-            &snapshots,
-            &comment_map,
-            collector.snapshot_history_limit,
-        );
+            let comment_map = build_latest_snapshot_comment_map(&snapshots);
+            add_task_comments_from_snapshots(&ds.store, &comment_map, &mut task_comment_map);
 
-        // Fetch backup groups
-        match client.get_backup_groups(&ds.store).await {
-            Ok(groups) => {
-                super::updates::update_backup_metrics(metrics, &ds.store, &groups, &comment_map)
-            }
-            Err(e) => {
-                error!("Failed to get backup groups for {}: {}", ds.store, e);
-                // Continue with other datastores
+            // Update individual snapshot metrics
+            super::updates::update_snapshot_metrics(
+                metrics,
+                &ds.store,
+                &ns.name,
+                &snapshots,
+                &comment_map,
+                collector.snapshot_history_limit,
+            );
+
+            // Fetch backup groups
+            match client.get_backup_groups(&ds.store).await {
+                Ok(groups) => {
+                    super::updates::update_backup_metrics(metrics, &ds.store, &ns.name, &groups, &comment_map)
+                }
+                Err(e) => {
+                    error!("Failed to get backup groups for {}: {}", ds.store, e);
+                    // Continue with other datastores
+                }
             }
         }
+
     }
 
     // Collect tasks

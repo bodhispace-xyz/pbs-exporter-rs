@@ -68,6 +68,13 @@ async fn test_metrics_endpoint_returns_prometheus_format() {
         .create_async()
         .await;
 
+    let _mock_namespaces = server
+        .mock("GET", "/api2/json/admin/datastore/backup/namespace")
+        .with_status(200)
+        .with_body(r#"{"data": [{"ns": ""}]}"#)
+        .create_async()
+        .await;
+
     let _mock_groups = server
         .mock("GET", "/api2/json/admin/datastore/backup/groups")
         .with_status(200)
@@ -321,6 +328,14 @@ async fn test_large_number_of_vms() {
         .with_body(r#"{"data": [{"store": "large", "total": 1000000000, "used": 500000000, "avail": 500000000}]}"#)
         .create_async()
         .await;
+
+    let _mock_namespaces = server
+        .mock("GET", "/api2/json/admin/datastore/large/namespace")
+        .with_status(200)
+        .with_body(r#"{"data": [{"ns": ""}]}"#)
+        .create_async()
+        .await;
+
 
     let mut groups = Vec::new();
     for i in 100..200 {
