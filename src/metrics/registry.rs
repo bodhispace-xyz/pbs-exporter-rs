@@ -211,12 +211,24 @@ impl MetricRegistry {
             snapshot_count: builder.gauge_vec(
                 "pbs_snapshot_count",
                 "Number of backup snapshots",
-                &["datastore", "namespace", "backup_type", "backup_id", "comment"],
+                &[
+                    "datastore",
+                    "namespace",
+                    "backup_type",
+                    "backup_id",
+                    "comment",
+                ],
             )?,
             snapshot_last_timestamp_seconds: builder.gauge_vec(
                 "pbs_snapshot_last_timestamp_seconds",
                 "Unix timestamp of last backup",
-                &["datastore", "namespace", "backup_type", "backup_id", "comment"],
+                &[
+                    "datastore",
+                    "namespace",
+                    "backup_type",
+                    "backup_id",
+                    "comment",
+                ],
             )?,
 
             // Individual snapshot metrics

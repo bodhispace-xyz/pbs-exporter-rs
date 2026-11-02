@@ -222,18 +222,31 @@ impl PbsClient {
     /// #     snapshot_history_limit: 0,
     /// # };
     /// # let client = PbsClient::new(config)?;
-    /// let groups = client.get_backup_groups("backup").await?;
+    /// let groups = client.get_backup_groups("backup", "").await?;
     /// for group in groups {
     ///     println!("{}/{}: {} backups", group.backup_type, group.backup_id, group.backup_count);
     /// }
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn get_backup_groups(&self, datastore: &str) -> Result<Vec<BackupGroup>> {
+    pub async fn get_backup_groups(
+        &self,
+        datastore: &str,
+        namespace: &str,
+    ) -> Result<Vec<BackupGroup>> {
         self.get_api_data(
-            &format!("/api2/json/admin/datastore/{}/groups", datastore),
-            &format!("backup groups for {}", datastore),
-            Some(format!("Failed to parse backup groups for {}", datastore)),
+            &format!(
+                "/api2/json/admin/datastore/{}/groups?ns={}",
+                datastore, namespace
+            ),
+            &format!(
+                "backup groups for namespace {} in datastore {}",
+                namespace, datastore
+            ),
+            Some(format!(
+                "Failed to parse backup groups for namespace {} in datastore {}",
+                namespace, datastore
+            )),
         )
         .await
     }
@@ -326,7 +339,7 @@ impl PbsClient {
     /// #     snapshot_history_limit: 0,
     /// # };
     /// # let client = PbsClient::new(config)?;
-    /// let snapshots = client.get_snapshots("backup").await?;
+    /// let snapshots = client.get_snapshots("backup", "").await?;
     /// for snapshot in snapshots {
     ///     println!("{}/{} at {}", snapshot.backup_type, snapshot.backup_id, snapshot.backup_time);
     ///     if let Some(comment) = snapshot.comment {
@@ -339,17 +352,24 @@ impl PbsClient {
     pub async fn get_snapshots(&self, datastore: &str, namespace: &str) -> Result<Vec<Snapshot>> {
         let snapshots: Vec<Snapshot> = self
             .get_api_data(
-                &format!("/api2/json/admin/datastore/{}/snapshots?ns={}", datastore, namespace),
+                &format!(
+                    "/api2/json/admin/datastore/{}/snapshots?ns={}",
+                    datastore, namespace
+                ),
                 &format!("snapshots for {}", datastore),
                 Some(format!("Failed to parse snapshots for {}", datastore)),
             )
             .await?;
 
-        debug!("Fetched {} snapshots for {} in namespace {}", snapshots.len(), datastore, namespace);
+        debug!(
+            "Fetched {} snapshots for {} in namespace {}",
+            snapshots.len(),
+            datastore,
+            namespace
+        );
         Ok(snapshots)
     }
 }
-
 
 impl PbsClient {
     /// Get namespaces for a specific datastore.

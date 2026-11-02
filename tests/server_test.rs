@@ -77,6 +77,7 @@ async fn test_metrics_endpoint_returns_prometheus_format() {
 
     let _mock_groups = server
         .mock("GET", "/api2/json/admin/datastore/backup/groups")
+        .match_query(mockito::Matcher::UrlEncoded("ns".into(), "".into()))
         .with_status(200)
         .with_body(r#"{"data": [{"backup-type": "vm", "backup-id": "100", "backup-count": 3, "last-backup": 1703635200}]}"#)
         .create_async()
@@ -270,15 +271,30 @@ async fn test_partial_failure_continues_collection() {
         .create_async()
         .await;
 
-    let _mock_groups1 = server
+    let _mock_namespaces1 = server
+        .mock("GET", "/api2/json/admin/datastore/store1/namespace")
+        .with_status(200)
+        .with_body(r#"{"data": [{"ns": ""}]}"#)
+        .create_async()
+        .await;
+    let _mock_namespaces2 = server
+        .mock("GET", "/api2/json/admin/datastore/store2/namespace")
+        .with_status(200)
+        .with_body(r#"{"data": [{"ns": ""}]}"#)
+        .create_async()
+        .await;
+
+    let mock_groups1 = server
         .mock("GET", "/api2/json/admin/datastore/store1/groups")
+        .match_query(mockito::Matcher::UrlEncoded("ns".into(), "".into()))
         .with_status(200)
         .with_body(r#"{"data": [{"backup-type": "vm", "backup-id": "100", "backup-count": 5, "last-backup": 1703635200}]}"#)
         .create_async()
         .await;
 
-    let _mock_groups2 = server
+    let mock_groups2 = server
         .mock("GET", "/api2/json/admin/datastore/store2/groups")
+        .match_query(mockito::Matcher::UrlEncoded("ns".into(), "".into()))
         .with_status(403)
         .with_body(r#"{"error": "forbidden"}"#)
         .create_async()
@@ -307,6 +323,9 @@ async fn test_partial_failure_continues_collection() {
     assert!(metrics.contains(r#"datastore="store1""#));
     // Should have metrics for store2 capacity (but not groups)
     assert!(metrics.contains(r#"datastore="store2""#));
+    assert!(metrics.contains(r#"backup_id="100""#));
+    mock_groups1.assert_async().await;
+    mock_groups2.assert_async().await;
 }
 
 // WGT: Test performance with large number of VMs (100+)
@@ -336,7 +355,6 @@ async fn test_large_number_of_vms() {
         .create_async()
         .await;
 
-
     let mut groups = Vec::new();
     for i in 100..200 {
         groups.push(format!(
@@ -348,6 +366,7 @@ async fn test_large_number_of_vms() {
 
     let _mock_groups = server
         .mock("GET", "/api2/json/admin/datastore/large/groups")
+        .match_query(mockito::Matcher::UrlEncoded("ns".into(), "".into()))
         .with_status(200)
         .with_body(&groups_json)
         .create_async()

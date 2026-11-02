@@ -117,6 +117,7 @@ async fn test_backup_groups_success() {
 
     let mock = server
         .mock("GET", "/api2/json/admin/datastore/datastore1/groups")
+        .match_query(mockito::Matcher::UrlEncoded("ns".into(), "".into()))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(
@@ -143,7 +144,53 @@ async fn test_backup_groups_success() {
     let config = create_test_config(&server.url());
     let client = PbsClient::new(config).unwrap();
 
-    let groups = client.get_backup_groups("datastore1").await.unwrap();
+    let groups = client.get_backup_groups("datastore1", "").await.unwrap();
+
+    assert_eq!(groups.len(), 2);
+    assert_eq!(groups[0].backup_type, "vm");
+    assert_eq!(groups[0].backup_id, "100");
+    assert_eq!(groups[0].backup_count, 7);
+    assert_eq!(groups[0].last_backup, 1703635200);
+    assert_eq!(groups[1].backup_type, "ct");
+    assert_eq!(groups[1].backup_id, "101");
+
+    mock.assert_async().await;
+}
+
+#[tokio::test]
+async fn test_backup_groups_with_namespace_success() {
+    let mut server = Server::new_async().await;
+
+    let mock = server
+        .mock("GET", "/api2/json/admin/datastore/datastore1/groups")
+        .match_query(mockito::Matcher::UrlEncoded("ns".into(), "namespace1".into()))
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(
+            r#"{
+            "data": [
+                {
+                    "backup-type": "vm",
+                    "backup-id": "100",
+                    "backup-count": 7,
+                    "last-backup": 1703635200
+                },
+                {
+                    "backup-type": "ct",
+                    "backup-id": "101",
+                    "backup-count": 5,
+                    "last-backup": 1703721600
+                }
+            ]
+        }"#,
+        )
+        .create_async()
+        .await;
+
+    let config = create_test_config(&server.url());
+    let client = PbsClient::new(config).unwrap();
+
+    let groups = client.get_backup_groups("datastore1", "namespace1").await.unwrap();
 
     assert_eq!(groups.len(), 2);
     assert_eq!(groups[0].backup_type, "vm");
@@ -253,8 +300,17 @@ async fn test_metrics_collection_success() {
         .await;
 
     // Mock backup groups
-    let _mock_groups = server
+    let mock_snapshots = server
+        .mock("GET", "/api2/json/admin/datastore/backup/snapshots")
+        .match_query(mockito::Matcher::UrlEncoded("ns".into(), "".into()))
+        .with_status(200)
+        .with_body(r#"{"data": []}"#)
+        .create_async()
+        .await;
+
+    let mock_groups = server
         .mock("GET", "/api2/json/admin/datastore/backup/groups")
+        .match_query(mockito::Matcher::UrlEncoded("ns".into(), "".into()))
         .with_status(200)
         .with_body(r#"{
             "data": [
@@ -293,6 +349,8 @@ async fn test_metrics_collection_success() {
     assert!(metrics_output.contains("pbs_datastore_total_bytes"));
     assert!(metrics_output.contains("pbs_snapshot_count"));
     assert!(metrics_output.contains("pbs_version"));
+    mock_snapshots.assert_async().await;
+    mock_groups.assert_async().await;
 }
 
 #[tokio::test]

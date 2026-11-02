@@ -89,7 +89,7 @@ pub(super) async fn collect_internal(collector: &MetricsCollector) -> Result<()>
     // Collect backup groups and snapshots for each datastore
     for ds in &datastores {
         // Fetch namespaces for datastore
-        let namespaces = match client.get_namespaces(&ds.store).await{
+        let namespaces = match client.get_namespaces(&ds.store).await {
             Ok(ns) => ns,
             Err(e) => {
                 error!("Failed to get namespaces for {}: {}", ds.store, e);
@@ -108,7 +108,12 @@ pub(super) async fn collect_internal(collector: &MetricsCollector) -> Result<()>
             };
 
             let comment_map = build_latest_snapshot_comment_map(&snapshots);
-            add_task_comments_from_snapshots(&ds.store, &comment_map, &mut task_comment_map);
+            add_task_comments_from_snapshots(
+                &ds.store,
+                &ns.name,
+                &comment_map,
+                &mut task_comment_map,
+            );
 
             // Update individual snapshot metrics
             super::updates::update_snapshot_metrics(
@@ -121,17 +126,20 @@ pub(super) async fn collect_internal(collector: &MetricsCollector) -> Result<()>
             );
 
             // Fetch backup groups
-            match client.get_backup_groups(&ds.store).await {
-                Ok(groups) => {
-                    super::updates::update_backup_metrics(metrics, &ds.store, &ns.name, &groups, &comment_map)
-                }
+            match client.get_backup_groups(&ds.store, &ns.name).await {
+                Ok(groups) => super::updates::update_backup_metrics(
+                    metrics,
+                    &ds.store,
+                    &ns.name,
+                    &groups,
+                    &comment_map,
+                ),
                 Err(e) => {
                     error!("Failed to get backup groups for {}: {}", ds.store, e);
                     // Continue with other datastores
                 }
             }
         }
-
     }
 
     // Collect tasks
@@ -241,13 +249,15 @@ fn build_latest_snapshot_comment_map(snapshots: &[Snapshot]) -> LatestSnapshotCo
 
 fn add_task_comments_from_snapshots(
     datastore: &str,
+    namespace: &str,
     comment_map: &LatestSnapshotCommentMap,
     task_comment_map: &mut TaskCommentMap,
 ) {
     for ((backup_type, backup_id), (_, comment)) in comment_map {
         if let Some(c) = comment {
             if !c.is_empty() {
-                let worker_id = format!("{}:{}/{}", datastore, backup_type, backup_id);
+                let worker_id =
+                    format!("{}/{}:{}/{}", datastore, namespace, backup_type, backup_id);
                 task_comment_map.insert(worker_id, c.clone());
             }
         }
