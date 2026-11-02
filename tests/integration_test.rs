@@ -163,7 +163,10 @@ async fn test_backup_groups_with_namespace_success() {
 
     let mock = server
         .mock("GET", "/api2/json/admin/datastore/datastore1/groups")
-        .match_query(mockito::Matcher::UrlEncoded("ns".into(), "namespace1".into()))
+        .match_query(mockito::Matcher::UrlEncoded(
+            "ns".into(),
+            "namespace1".into(),
+        ))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(
@@ -190,7 +193,10 @@ async fn test_backup_groups_with_namespace_success() {
     let config = create_test_config(&server.url());
     let client = PbsClient::new(config).unwrap();
 
-    let groups = client.get_backup_groups("datastore1", "namespace1").await.unwrap();
+    let groups = client
+        .get_backup_groups("datastore1", "namespace1")
+        .await
+        .unwrap();
 
     assert_eq!(groups.len(), 2);
     assert_eq!(groups[0].backup_type, "vm");
