@@ -82,9 +82,9 @@ pub(super) async fn collect_internal(collector: &MetricsCollector) -> Result<()>
     let datastores = client.get_datastore_usage().await?;
     super::updates::update_datastore_metrics(metrics, &datastores);
 
-    // Map to store comments for tasks (worker_id -> comment)
-    // Pre-allocate with estimated capacity
-    let mut task_comment_map = TaskCommentMap::with_capacity(datastores.len() * 10);
+    // Worker IDs omit namespaces, so retain all matching namespaces until collection ends.
+    let mut task_candidates: HashMap<String, HashMap<String, Option<String>>> =
+        HashMap::with_capacity(datastores.len() * 10);
 
     // Collect backup groups and snapshots for each datastore
     for ds in &datastores {
@@ -108,12 +108,13 @@ pub(super) async fn collect_internal(collector: &MetricsCollector) -> Result<()>
             };
 
             let comment_map = build_latest_snapshot_comment_map(&snapshots);
-            add_task_comments_from_snapshots(
-                &ds.store,
-                &ns.name,
-                &comment_map,
-                &mut task_comment_map,
-            );
+            for ((backup_type, backup_id), (_, comment)) in &comment_map {
+                let worker_id = format!("{}:{}/{}", ds.store, backup_type, backup_id);
+                task_candidates
+                    .entry(worker_id)
+                    .or_default()
+                    .insert(ns.name.clone(), comment.clone());
+            }
 
             // Update individual snapshot metrics
             super::updates::update_snapshot_metrics(
@@ -127,13 +128,24 @@ pub(super) async fn collect_internal(collector: &MetricsCollector) -> Result<()>
 
             // Fetch backup groups
             match client.get_backup_groups(&ds.store, &ns.name).await {
-                Ok(groups) => super::updates::update_backup_metrics(
-                    metrics,
-                    &ds.store,
-                    &ns.name,
-                    &groups,
-                    &comment_map,
-                ),
+                Ok(groups) => {
+                    for group in &groups {
+                        let worker_id =
+                            format!("{}:{}/{}", ds.store, group.backup_type, group.backup_id);
+                        task_candidates
+                            .entry(worker_id)
+                            .or_default()
+                            .entry(ns.name.clone())
+                            .or_insert(None);
+                    }
+                    super::updates::update_backup_metrics(
+                        metrics,
+                        &ds.store,
+                        &ns.name,
+                        &groups,
+                        &comment_map,
+                    );
+                }
                 Err(e) => {
                     error!("Failed to get backup groups for {}: {}", ds.store, e);
                     // Continue with other datastores
@@ -141,6 +153,21 @@ pub(super) async fn collect_internal(collector: &MetricsCollector) -> Result<()>
             }
         }
     }
+
+    let task_comment_map: TaskCommentMap = task_candidates
+        .into_iter()
+        .filter_map(|(worker_id, namespaces)| {
+            if namespaces.len() != 1 {
+                return None;
+            }
+            namespaces
+                .into_values()
+                .next()
+                .flatten()
+                .filter(|comment| !comment.is_empty())
+                .map(|comment| (worker_id, comment))
+        })
+        .collect();
 
     // Collect tasks
     match client.get_tasks(Some(50)).await {
@@ -245,21 +272,4 @@ fn build_latest_snapshot_comment_map(snapshots: &[Snapshot]) -> LatestSnapshotCo
     }
 
     comment_map
-}
-
-fn add_task_comments_from_snapshots(
-    datastore: &str,
-    namespace: &str,
-    comment_map: &LatestSnapshotCommentMap,
-    task_comment_map: &mut TaskCommentMap,
-) {
-    for ((backup_type, backup_id), (_, comment)) in comment_map {
-        if let Some(c) = comment {
-            if !c.is_empty() {
-                let worker_id =
-                    format!("{}/{}:{}/{}", datastore, namespace, backup_type, backup_id);
-                task_comment_map.insert(worker_id, c.clone());
-            }
-        }
-    }
 }
