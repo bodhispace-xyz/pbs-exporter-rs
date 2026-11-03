@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7](https://github.com/bodhispace-xyz/pbs-exporter-rs/compare/v0.4.6...v0.4.7) (2026-11-03)
+
+
+### Bug Fixes
+
+* **ci:** align release tags and publish release artifacts ([4577ca4](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/4577ca407478056368dbe28e423c5c9d12315862))
+* **ci:** align release tags and publish release artifacts ([d72e246](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/d72e2461f0a34c27fd03c8cd6040368b22642310))
+* **ci:** disable implicit latest image tags ([7faad4d](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/7faad4de7350f336193df6be4963d55c87299f8e))
+* **ci:** resolve release inputs as immutable tag refs ([c115236](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/c115236335b30522807200b8c49509bb8e1fbda8))
+
 ## [0.4.6](https://github.com/bodhispace-xyz/pbs-exporter-rs/compare/v0.4.5...v0.4.6) (2026-11-03)
 
 ### Features
