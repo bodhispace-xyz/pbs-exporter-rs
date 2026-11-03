@@ -22,3 +22,6 @@ Thumbs.db
 
 # Claude Code artifacts
 .claude/
+
+# Release workflow test caches
+__pycache__/
