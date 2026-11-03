@@ -88,6 +88,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: latest=false
           tags: |
             type=raw,value=main,enable=${{ steps.context.outputs.is_release != 'true' }}
             type=raw,value=sha-${{ steps.context.outputs.sha }}
