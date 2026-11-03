@@ -102,6 +102,14 @@ pub struct Snapshot {
     pub verification: Option<VerificationStatus>,
 }
 
+/// Snapshot information from PBS.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Namespace {
+    /// Namespace string
+    #[serde(rename = "ns")]
+    pub name: String,
+}
+
 /// Verification status information.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct VerificationStatus {
