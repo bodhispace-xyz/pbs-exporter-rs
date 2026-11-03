@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1](https://github.com/bodhispace-xyz/pbs-exporter-rs/compare/v0.5.0...v0.5.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **release:** pin source commits and preserve locked Docker tooling ([7ccc65a](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/7ccc65aa44a158682e1da0c63e3c30d791f22ea6))
+* **release:** pin source commits and preserve locked Docker tooling ([3383aa1](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/3383aa1009c131069684563aed9f1bdfd434d535))
+
 ## [0.5.0](https://github.com/bodhispace-xyz/pbs-exporter-rs/compare/v0.4.7...v0.5.0) (2026-11-03)
 
 
