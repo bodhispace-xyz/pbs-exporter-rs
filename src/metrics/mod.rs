@@ -15,6 +15,8 @@ pub use registry::MetricRegistry;
 use crate::client::PbsClient;
 use crate::error::Result;
 use std::sync::Arc;
+use tokio::sync::Mutex;
+use tracing::warn;
 
 /// Metrics collector for PBS exporter.
 ///
@@ -23,6 +25,7 @@ use std::sync::Arc;
 pub struct MetricsCollector {
     client: Arc<PbsClient>,
     metrics: MetricRegistry,
+    collection_lock: Arc<Mutex<()>>,
     /// Controls how many historical snapshots per backup group are exposed.
     ///
     /// - 0 = expose all snapshots (no limit)
@@ -62,6 +65,7 @@ impl MetricsCollector {
     ///     token_id: "user@pam!token".to_string(),
     ///     token_secret: "secret".to_string(),
     ///     verify_tls: true,
+    ///     ca_cert_path: None,
     ///     timeout_seconds: 30,
     ///     snapshot_history_limit: 7,
     /// };
@@ -76,6 +80,7 @@ impl MetricsCollector {
         Ok(Self {
             client,
             metrics,
+            collection_lock: Arc::new(Mutex::new(())),
             snapshot_history_limit,
         })
     }
@@ -109,6 +114,7 @@ impl MetricsCollector {
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
     /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 30,
     /// #     snapshot_history_limit: 7,
     /// # };
@@ -119,10 +125,28 @@ impl MetricsCollector {
     /// # }
     /// ```
     pub async fn collect(&self) -> Result<()> {
+        let _guard = self.collection_lock.lock().await;
         collect(self).await
     }
 
+    /// Collect and encode one complete scrape while excluding other collectors.
+    ///
+    /// Collection failures are logged and still produce metrics with `pbs_up = 0`,
+    /// matching the HTTP endpoint's existing behavior. The guard also covers encoding,
+    /// so a waiting request cannot reset the registry before this response is captured.
+    pub async fn collect_and_encode(&self) -> Result<String> {
+        let _guard = self.collection_lock.lock().await;
+        if let Err(error) = collect(self).await {
+            warn!("Failed to collect metrics: {}", error);
+        }
+        self.metrics.encode()
+    }
+
     /// Encode metrics in Prometheus text format.
+    ///
+    /// For concurrent scrape clients, use `collect_and_encode` to keep collection
+    /// and encoding in one transaction. A separate `collect`/`encode` pair requires
+    /// caller-side serialization.
     ///
     /// Serializes all collected metrics into Prometheus exposition format suitable
     /// for scraping by Prometheus or compatible monitoring systems.
@@ -142,6 +166,7 @@ impl MetricsCollector {
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
     /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 30,
     /// #     snapshot_history_limit: 7,
     /// # };

@@ -98,7 +98,7 @@ docker run -p 9101:9101 \
   -e PBS_EXPORTER__PBS__ENDPOINT=https://pbs.example.com:8007 \
   -e PBS_EXPORTER__PBS__TOKEN_ID=exporter@pam!metrics \
   -e PBS_EXPORTER__PBS__TOKEN_SECRET=your-secret \
-  -e PBS_EXPORTER__PBS__VERIFY_TLS=false \
+  -e PBS_EXPORTER__PBS__VERIFY_TLS=true \
   pbs-exporter
 ```
 
@@ -131,7 +131,7 @@ Create `config/default.toml`:
 endpoint = "https://pbs.example.com:8007"
 token_id = "exporter@pam!metrics"
 token_secret = "your-secret-token"
-verify_tls = false
+verify_tls = true
 timeout_seconds = 5
 snapshot_history_limit = 0  # 0=unlimited, 1=latest only, 2=two most recent, etc.
 
@@ -154,7 +154,7 @@ pbs-exporter --config config/default.toml
 export PBS_EXPORTER__PBS__ENDPOINT=https://pbs.example.com:8007
 export PBS_EXPORTER__PBS__TOKEN_ID=exporter@pam!metrics
 export PBS_EXPORTER__PBS__TOKEN_SECRET=your-secret
-export PBS_EXPORTER__PBS__VERIFY_TLS=false
+export PBS_EXPORTER__PBS__VERIFY_TLS=true
 export PBS_EXPORTER__PBS__SNAPSHOT_HISTORY_LIMIT=0
 
 pbs-exporter
@@ -167,7 +167,8 @@ pbs-exporter
 | `PBS_EXPORTER__PBS__ENDPOINT` | - | PBS server URL (required) |
 | `PBS_EXPORTER__PBS__TOKEN_ID` | - | API token ID (required) |
 | `PBS_EXPORTER__PBS__TOKEN_SECRET` | - | API token secret (required) |
-| `PBS_EXPORTER__PBS__VERIFY_TLS` | `false` | Verify TLS certificates |
+| `PBS_EXPORTER__PBS__VERIFY_TLS` | `true` | Verify the PBS certificate and hostname; requires HTTPS |
+| `PBS_EXPORTER__PBS__CA_CERT_PATH` | unset | Path to an additional trusted PEM CA/certificate bundle |
 | `PBS_EXPORTER__PBS__TIMEOUT_SECONDS` | `5` | API request timeout |
 | `PBS_EXPORTER__PBS__SNAPSHOT_HISTORY_LIMIT` | `0` | Max snapshots per group (0=unlimited) |
 | `PBS_EXPORTER__EXPORTER__LISTEN_ADDRESS` | `0.0.0.0:9101` | Listen address |
@@ -270,7 +271,7 @@ docker run -d \
   -e PBS_EXPORTER__PBS__ENDPOINT=https://pbs.example.com:8007 \
   -e PBS_EXPORTER__PBS__TOKEN_ID=exporter@pam!metrics \
   -e PBS_EXPORTER__PBS__TOKEN_SECRET=your-secret \
-  -e PBS_EXPORTER__PBS__VERIFY_TLS=false \
+  -e PBS_EXPORTER__PBS__VERIFY_TLS=true \
   --restart unless-stopped \
   pbs-exporter
 ```
@@ -284,7 +285,7 @@ Create a `.env` file:
 PBS_EXPORTER__PBS__ENDPOINT=https://pbs.example.com:8007
 PBS_EXPORTER__PBS__TOKEN_ID=exporter@pam!metrics
 PBS_EXPORTER__PBS__TOKEN_SECRET=your-secret-token
-PBS_EXPORTER__PBS__VERIFY_TLS=false
+PBS_EXPORTER__PBS__VERIFY_TLS=true
 PBS_EXPORTER__PBS__TIMEOUT_SECONDS=5
 
 # Snapshot History Limit
@@ -342,18 +343,50 @@ For deploying across multiple LXC containers (e.g., exporter in LXC1, Prometheus
 
 ### TLS Certificate Errors
 
-If you're using self-signed certificates:
+Certificate verification is enabled by default. The PBS endpoint must use HTTPS
+when verification is enabled, including redirect destinations. Existing configurations that explicitly set
+`verify_tls = false` remain an insecure opt-out and emit a warning.
+
+For a private CA or a self-signed PBS certificate, obtain the PEM CA bundle (or
+self-signed server certificate) through a trusted administration channel and verify
+its fingerprint. Keep verification enabled and configure its path:
 
 ```toml
 [pbs]
-verify_tls = false
+verify_tls = true
+ca_cert_path = "/etc/pbs-exporter/pbs-ca.pem"
 ```
 
 Or via environment:
 
 ```bash
-export PBS_EXPORTER__PBS__VERIFY_TLS=false
+export PBS_EXPORTER__PBS__VERIFY_TLS=true
+export PBS_EXPORTER__PBS__CA_CERT_PATH=/etc/pbs-exporter/pbs-ca.pem
 ```
+
+For Docker Compose, mount the public certificate read-only and use the container
+path in the configuration:
+
+```yaml
+volumes:
+  - ./pbs-ca.pem:/etc/pbs-exporter/pbs-ca.pem:ro
+environment:
+  PBS_EXPORTER__PBS__CA_CERT_PATH: /etc/pbs-exporter/pbs-ca.pem
+```
+
+The URL hostname must match the certificate's subject alternative names. Trusting
+a CA does not disable hostname checks. Missing, invalid or empty CA bundles fail
+startup; certificate failures do not fall back to insecure TLS.
+
+For temporary testing on a trusted network only, explicitly set
+`PBS_EXPORTER__PBS__VERIFY_TLS=false`. This also permits a plain HTTP endpoint and
+removes peer authentication. Do not configure a CA bundle with this opt-out: the
+exporter rejects that combination so the trust setting cannot be silently ignored.
+
+**Upgrade note:** deployments that previously omitted `verify_tls` and relied on
+an untrusted/self-signed certificate must configure their CA before upgrading.
+Rust callers constructing `PbsConfig` directly must also provide `ca_cert_path`
+(`None` for the normal public trust store).
 
 ### Authentication Errors
 

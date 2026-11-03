@@ -13,6 +13,7 @@ fn create_test_config(server_url: &str) -> PbsConfig {
         token_id: "test@pam!token".to_string(),
         token_secret: "test-secret".to_string(),
         verify_tls: false,
+        ca_cert_path: None,
         timeout_seconds: 5,
         snapshot_history_limit: 0,
     }
