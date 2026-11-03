@@ -12,6 +12,7 @@ fn create_test_config(server_url: &str) -> PbsConfig {
         token_id: "test@pam!token".to_string(),
         token_secret: "test-secret".to_string(),
         verify_tls: false,
+        ca_cert_path: None,
         timeout_seconds: 5,
         snapshot_history_limit: 0,
     }
@@ -711,4 +712,41 @@ async fn test_metrics_collection_failure() {
     // Should still be able to encode (with pbs_up = 0)
     let metrics_output = collector.encode().unwrap();
     assert!(metrics_output.contains("pbs_up 0"));
+}
+
+async fn assert_terminal_status_is_an_error(status: usize) {
+    let mut server = Server::new_async().await;
+    let response = server
+        .mock("GET", "/api2/json/nodes/localhost/status")
+        .with_status(status)
+        .create_async()
+        .await;
+    let client = PbsClient::new(create_test_config(&server.url())).unwrap();
+    let error = client
+        .get_node_status()
+        .await
+        .expect_err("non-success status must return Err");
+    if status >= 400 {
+        assert!(matches!(error, pbs_exporter::error::PbsError::Api(_)));
+    } else {
+        assert!(matches!(&error, pbs_exporter::error::PbsError::Other(_)));
+        assert!(error.to_string().contains(&status.to_string()));
+    }
+    response.assert_async().await;
+}
+
+#[tokio::test]
+async fn terminal_302_without_location_returns_error() {
+    assert_terminal_status_is_an_error(302).await;
+}
+
+#[tokio::test]
+async fn terminal_304_returns_error() {
+    assert_terminal_status_is_an_error(304).await;
+}
+
+#[tokio::test]
+async fn client_and_server_errors_keep_api_error_type() {
+    assert_terminal_status_is_an_error(401).await;
+    assert_terminal_status_is_an_error(500).await;
 }

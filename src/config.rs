@@ -23,9 +23,13 @@ pub struct PbsConfig {
     #[serde(default)]
     pub token_secret: String,
 
-    /// Verify TLS certificates (set to false for self-signed certs)
+    /// Verify TLS certificates. Prefer a CA bundle for private/self-signed certificates.
     #[serde(default = "default_verify_tls")]
     pub verify_tls: bool,
+
+    /// Optional PEM CA certificate bundle for the PBS endpoint.
+    #[serde(default)]
+    pub ca_cert_path: Option<String>,
 
     /// Request timeout in seconds
     #[serde(default = "default_timeout")]
@@ -43,6 +47,7 @@ impl std::fmt::Debug for PbsConfig {
             .field("token_id", &self.token_id)
             .field("token_secret", &"***REDACTED***")
             .field("verify_tls", &self.verify_tls)
+            .field("ca_cert_path", &self.ca_cert_path)
             .field("timeout_seconds", &self.timeout_seconds)
             .field("snapshot_history_limit", &self.snapshot_history_limit)
             .finish()
@@ -71,7 +76,7 @@ pub struct Settings {
 }
 
 fn default_verify_tls() -> bool {
-    false
+    true
 }
 
 fn default_timeout() -> u64 {
@@ -183,6 +188,7 @@ impl Default for Settings {
                 token_id: String::new(),
                 token_secret: String::new(),
                 verify_tls: default_verify_tls(),
+                ca_cert_path: None,
                 timeout_seconds: default_timeout(),
                 snapshot_history_limit: default_snapshot_history_limit(),
             },
@@ -203,8 +209,20 @@ mod tests {
         let settings = Settings::default();
         assert_eq!(settings.pbs.endpoint, "https://localhost:8007");
         assert_eq!(settings.exporter.listen_address, "0.0.0.0:9101");
-        assert!(!settings.pbs.verify_tls);
+        assert!(settings.pbs.verify_tls);
         assert_eq!(settings.pbs.snapshot_history_limit, 0);
+    }
+
+    #[test]
+    fn omitted_tls_setting_enables_certificate_verification() {
+        let config = config::Config::builder()
+            .add_source(config::File::from_str(
+                "endpoint = 'https://localhost:8007'\ntoken_id = 'test@pam!token'\ntoken_secret = 'dummy'",
+                config::FileFormat::Toml,
+            ))
+            .build().unwrap();
+        let pbs: PbsConfig = config.try_deserialize().unwrap();
+        assert!(pbs.verify_tls);
     }
 
     #[test]

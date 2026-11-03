@@ -39,17 +39,51 @@ impl PbsClient {
     ///     endpoint: "https://pbs.example.com:8007".to_string(),
     ///     token_id: "user@pam!token".to_string(),
     ///     token_secret: "secret".to_string(),
-    ///     verify_tls: false,
+    ///     verify_tls: true,
+    ///     ca_cert_path: None,
     ///     timeout_seconds: 5,
     ///     snapshot_history_limit: 0,
     /// };
     /// let client = PbsClient::new(config).unwrap();
     /// ```
     pub fn new(config: PbsConfig) -> Result<Self> {
-        let client = Client::builder()
+        let endpoint = reqwest::Url::parse(&config.endpoint)
+            .map_err(|_| PbsError::Other("PBS endpoint must be a valid HTTP(S) URL".into()))?;
+        if !matches!(endpoint.scheme(), "http" | "https") {
+            return Err(PbsError::Other(
+                "PBS endpoint must use HTTP or HTTPS".into(),
+            ));
+        }
+        if config.verify_tls && endpoint.scheme() != "https" {
+            return Err(PbsError::Other(
+                "TLS verification requires an HTTPS PBS endpoint; HTTP requires explicit verify_tls=false".into(),
+            ));
+        }
+        if !config.verify_tls {
+            if config.ca_cert_path.is_some() {
+                return Err(PbsError::Other(
+                    "A custom CA requires verify_tls=true".into(),
+                ));
+            }
+            warn!("PBS TLS verification is disabled; credentials are not protected against peer impersonation");
+        }
+        let mut builder = Client::builder()
             .timeout(Duration::from_secs(config.timeout_seconds))
             .danger_accept_invalid_certs(!config.verify_tls)
-            .build()?;
+            .https_only(config.verify_tls);
+        if let Some(path) = &config.ca_cert_path {
+            let pem = std::fs::read(path)?;
+            let certificates = reqwest::Certificate::from_pem_bundle(&pem)?;
+            if certificates.is_empty() {
+                return Err(PbsError::Other(
+                    "PBS CA bundle contains no certificates".into(),
+                ));
+            }
+            for certificate in certificates {
+                builder = builder.add_root_certificate(certificate);
+            }
+        }
+        let client = builder.build()?;
 
         let auth_header = format!("PBSAPIToken={}:{}", config.token_id, config.token_secret);
 
@@ -85,7 +119,11 @@ impl PbsClient {
                 request_description,
                 response.status()
             );
-            return Err(PbsError::Api(response.error_for_status().unwrap_err()));
+            let status = response.status();
+            return Err(match response.error_for_status() {
+                Err(error) => PbsError::Api(error),
+                Ok(_) => PbsError::Other(format!("Unexpected PBS HTTP status: {status}")),
+            });
         }
 
         let api_response: ApiResponse<T> = match parse_error_context {
@@ -126,7 +164,8 @@ impl PbsClient {
     /// #     endpoint: "https://pbs.example.com:8007".to_string(),
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
-    /// #     verify_tls: false,
+    /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 5,
     /// #     snapshot_history_limit: 0,
     /// # };
@@ -169,7 +208,8 @@ impl PbsClient {
     /// #     endpoint: "https://pbs.example.com:8007".to_string(),
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
-    /// #     verify_tls: false,
+    /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 5,
     /// #     snapshot_history_limit: 0,
     /// # };
@@ -217,7 +257,8 @@ impl PbsClient {
     /// #     endpoint: "https://pbs.example.com:8007".to_string(),
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
-    /// #     verify_tls: false,
+    /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 5,
     /// #     snapshot_history_limit: 0,
     /// # };
@@ -278,7 +319,8 @@ impl PbsClient {
     /// #     endpoint: "https://pbs.example.com:8007".to_string(),
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
-    /// #     verify_tls: false,
+    /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 5,
     /// #     snapshot_history_limit: 0,
     /// # };
@@ -334,7 +376,8 @@ impl PbsClient {
     /// #     endpoint: "https://pbs.example.com:8007".to_string(),
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
-    /// #     verify_tls: false,
+    /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 5,
     /// #     snapshot_history_limit: 0,
     /// # };
@@ -402,7 +445,8 @@ impl PbsClient {
     /// #     endpoint: "https://pbs.example.com:8007".to_string(),
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
-    /// #     verify_tls: false,
+    /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 5,
     /// #     snapshot_history_limit: 0,
     /// # };
@@ -461,7 +505,8 @@ impl PbsClient {
     /// #     endpoint: "https://pbs.example.com:8007".to_string(),
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
-    /// #     verify_tls: false,
+    /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 5,
     /// #     snapshot_history_limit: 0,
     /// # };
@@ -518,7 +563,8 @@ impl PbsClient {
     /// #     endpoint: "https://pbs.example.com:8007".to_string(),
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
-    /// #     verify_tls: false,
+    /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 5,
     /// #     snapshot_history_limit: 0,
     /// # };
@@ -570,7 +616,8 @@ impl PbsClient {
     /// #     endpoint: "https://pbs.example.com:8007".to_string(),
     /// #     token_id: "user@pam!token".to_string(),
     /// #     token_secret: "secret".to_string(),
-    /// #     verify_tls: false,
+    /// #     verify_tls: true,
+    /// #     ca_cert_path: None,
     /// #     timeout_seconds: 5,
     /// #     snapshot_history_limit: 0,
     /// # };

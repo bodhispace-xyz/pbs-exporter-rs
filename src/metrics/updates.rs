@@ -203,9 +203,17 @@ fn latest_snapshot_comment<'a>(
         .unwrap_or(EMPTY_STR)
 }
 
+fn truncate_comment_at_boundary(comment: &str, limit: usize) -> &str {
+    let mut end = comment.len().min(limit);
+    while !comment.is_char_boundary(end) {
+        end -= 1;
+    }
+    &comment[..end]
+}
+
 fn truncate_snapshot_comment(comment: &str) -> &str {
     if comment.len() > 50 {
-        &comment[..47]
+        truncate_comment_at_boundary(comment, 47)
     } else {
         comment
     }
@@ -213,7 +221,7 @@ fn truncate_snapshot_comment(comment: &str) -> &str {
 
 fn truncate_backup_comment(comment: &str) -> &str {
     if comment.len() > 50 {
-        &comment[..50]
+        truncate_comment_at_boundary(comment, 50)
     } else {
         comment
     }
@@ -431,4 +439,29 @@ pub(super) fn update_version_metrics(metrics: &MetricRegistry, version: &Version
         .pbs_version
         .with_label_values(&[&version.version, &version.release, &version.repoid])
         .set(1.0);
+}
+
+#[cfg(test)]
+mod hardening_tests {
+    use super::{truncate_backup_comment, truncate_snapshot_comment};
+
+    #[test]
+    fn snapshot_comment_cut_inside_unicode_stays_valid() {
+        let comment = format!("{}€bb", "a".repeat(46));
+        assert_eq!(truncate_snapshot_comment(&comment), "a".repeat(46));
+    }
+
+    #[test]
+    fn backup_comment_cut_inside_unicode_stays_valid() {
+        let comment = format!("{}€", "a".repeat(49));
+        assert_eq!(truncate_backup_comment(&comment), "a".repeat(49));
+    }
+
+    #[test]
+    fn short_unicode_comments_and_ascii_limits_are_preserved() {
+        assert_eq!(truncate_snapshot_comment("café"), "café");
+        assert_eq!(truncate_backup_comment("café"), "café");
+        assert_eq!(truncate_snapshot_comment(&"a".repeat(51)).len(), 47);
+        assert_eq!(truncate_backup_comment(&"a".repeat(51)).len(), 50);
+    }
 }
