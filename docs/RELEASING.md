@@ -7,7 +7,8 @@ metadata back to `develop` through a PR.
 
 ## Publication paths
 
-- A normal `main` push publishes only the `main` and commit-SHA Docker tags.
+- A normal `main` push builds its triggering commit, even if the branch advances
+  while queued. It publishes only the `main` and commit-SHA Docker tags.
 - A merged Release Please PR creates a `v<version>` GitHub release. The same workflow
   calls the publisher directly, using Release Please's `release_created` and
   `tag_name` outputs. It does not depend on a bot-created tag starting another run.
@@ -25,8 +26,9 @@ release baseline. Do not move an existing release tag to a different commit.
 
 Use **Actions → Release → Run workflow** on `main` and supply the existing
 `release_tag`, for example `v0.4.6`. This rebuilds that tag and replaces its uploaded
-assets if needed. The validator comes from the workflow revision, so recovery also
-works when the older release tag predates the validator script. The tag's version
+assets if needed. The validator and locked Docker build file come from the workflow
+revision, so recovery also works when the older release predates those changes.
+The binary and image are built from the tagged source and lockfile. The tag's version
 files must still agree. This operation publishes release artifacts; use it only for
 an intended release, not a feature branch.
 
@@ -44,5 +46,8 @@ The Check job also runs the release-context regression tests:
 python3 -m unittest discover -s tests -p release_context_test.py
 ```
 
-GitHub may require maintainer approval before running a bot-created PR's CI.
-Approving that run does not approve merging the PR.
+After each bot update, check the latest commit's Checks tab and select **Approve
+workflows to run** if prompted. If no CI run exists, close and reopen the PR as a
+maintainer to trigger its checks. Wait for all seven jobs on the latest commit.
+Approving that run does not approve merging the PR. See
+[GitHub's token event rules](https://docs.github.com/en/actions/concepts/security/github_token).

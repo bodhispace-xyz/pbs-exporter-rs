@@ -38,13 +38,15 @@ jobs:
         with:
           ref: ${{ github.workflow_sha }}
 
-      - name: Preserve release validator
-        run: cp scripts/release_context.py "$RUNNER_TEMP/pbs-release-context.py"
+      - name: Preserve publication tooling
+        run: |
+          cp scripts/release_context.py "$RUNNER_TEMP/pbs-release-context.py"
+          cp Dockerfile "$RUNNER_TEMP/pbs-release.Dockerfile"
 
       - name: Checkout publication source
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.sha }}
 
       - name: Validate release identity
         id: context
@@ -105,6 +107,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ${{ runner.temp }}/pbs-release.Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
