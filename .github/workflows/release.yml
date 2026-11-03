@@ -44,7 +44,7 @@ jobs:
       - name: Checkout publication source
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_tag || github.ref }}
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
 
       - name: Validate release identity
         id: context
