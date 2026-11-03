@@ -18,7 +18,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 
 # Build release binary with optimizations
-RUN cargo build --release && \
+RUN cargo build --release --locked && \
     strip /app/target/release/pbs-exporter
 
 # Stage 2: Runtime image (Alpine for minimal size)
