@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6](https://github.com/bodhispace-xyz/pbs-exporter-rs/compare/pbs-exporter-rs-v0.4.5...pbs-exporter-rs-v0.4.6) (2026-08-24)
+
+
+### Performance Improvements
+
+* **ci:** speed up CI with pre-built cargo-audit binary and parallel release build ([6a85f12](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/6a85f12957b5b025df1594e8ea035c58ff12bb5b))
+* **ci:** speed up CI with pre-built cargo-audit binary and parallel release build ([51ca1de](https://github.com/bodhispace-xyz/pbs-exporter-rs/commit/51ca1de36bfd8a2a9287f9f40d5fb2cb1c6db4c2))
+
 ## [0.4.5](https://github.com/bodhispace-xyz/pbs-exporter-rs/compare/pbs-exporter-rs-v0.4.4...pbs-exporter-rs-v0.4.5) (2026-08-22)
 
 
