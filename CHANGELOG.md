@@ -5,8 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.6](https://github.com/bodhispace-xyz/pbs-exporter-rs/compare/pbs-exporter-rs-v0.4.5...pbs-exporter-rs-v0.4.6) (2026-08-24)
+## [0.4.6](https://github.com/bodhispace-xyz/pbs-exporter-rs/compare/v0.4.5...v0.4.6) (2026-11-03)
 
+### Features
+
+* Collect snapshot and backup-group metrics from PBS datastore namespaces, with a `namespace` label on the affected metrics ([#34](https://github.com/bodhispace-xyz/pbs-exporter-rs/pull/34)). The root namespace uses an empty label value.
+* Assign snapshot comments to task metrics only when the backup identity matches one namespace; retain explicit task comments ([#34](https://github.com/bodhispace-xyz/pbs-exporter-rs/pull/34)).
+
+### Dependencies
+
+* Update `quinn-proto`, `rustls`, `rustls-webpki`, and `webpki-roots` to address dependency audit findings ([#34](https://github.com/bodhispace-xyz/pbs-exporter-rs/pull/34)).
+
+### Maintenance
+
+* Request owner review for repository changes with `CODEOWNERS` ([#35](https://github.com/bodhispace-xyz/pbs-exporter-rs/pull/35)).
+* Explicitly target `main` for Release Please PRs ([#33](https://github.com/bodhispace-xyz/pbs-exporter-rs/pull/33)).
 
 ### Performance Improvements
 
